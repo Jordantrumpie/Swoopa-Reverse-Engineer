@@ -1,0 +1,56 @@
+# Copy to config.yaml and edit.  `python -m flipper run`
+data_dir: data
+interval_seconds: 90        # time between full passes over all searches (jittered ±30%)
+quiet_hours: [1, 6]         # poll 4x slower between 1am and 6am
+
+searches:
+  # Marketplace city slug: open Marketplace, pick your location, copy the word after
+  # /marketplace/ in the URL (e.g. "austin", "nyc", or a numeric id like "108424279189115").
+  - name: cheap-commuters
+    location: austin
+    min_price: 1500
+    max_price: 7000
+    max_miles: 180000
+    min_year: 2005
+    alert_all: true          # ping on EVERY new listing — fastest-to-message mode
+    exclude: [transmission, "check engine"]
+
+  - name: tacoma
+    location: austin
+    query: tacoma
+    max_price: 15000
+    # no alert_all: only pings when it hits a target below or is cheap vs. comps
+
+  # Or paste any Marketplace URL you've already set up filters on:
+  # - name: my-custom-search
+  #   url: "https://www.facebook.com/marketplace/austin/vehicles?maxPrice=5000&carType=sedan"
+
+# Buy boxes: anything matching pings you, even on non-alert_all searches.
+targets:
+  - name: Gen-8/9 Civic under 6k
+    make: honda
+    model: civic
+    year_min: 2006
+    year_max: 2015
+    max_price: 6000
+    max_miles: 170000
+  - make: toyota
+    model: camry
+    year_min: 2007
+    max_price: 5500
+
+alerts:
+  min_price: 500            # ignore $1 / "message for price" listings
+  min_comps: 5              # need this many similar cars in your DB before comp-based alerts fire
+  min_discount: 0.20        # alert when ≥20% under median of comps (same make/model, ±2 years)
+  min_price_drop: 0.10      # alert when a seen listing drops ≥10%
+  skip_red_flags: true      # drop salvage/rebuilt/parts/no-title/down-payment listings
+
+notify:                     # configure any/all
+  ntfy:                     # easiest: install the ntfy app, subscribe to your topic
+    topic: pick-a-long-random-topic-name
+  # telegram:
+  #   bot_token: "123456:ABC..."
+  #   chat_id: "123456789"
+  # discord:
+  #   webhook_url: "https://discord.com/api/webhooks/..."
