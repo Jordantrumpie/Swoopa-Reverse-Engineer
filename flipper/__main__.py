@@ -17,7 +17,7 @@ log = logging.getLogger("flipper")
 
 
 def load_config(path: str) -> dict:
-    with open(path) as f:
+    with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f) or {}
     cfg.setdefault("data_dir", "data")
     cfg.setdefault("searches", [])
