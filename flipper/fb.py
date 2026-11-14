@@ -11,6 +11,11 @@ from .extract import extract_listings, iter_html_json, iter_json_docs
 log = logging.getLogger(__name__)
 
 BASE = "https://www.facebook.com/marketplace"
+_BLOCK_MARKERS = ("/login", "/checkpoint", "/two_step_verification", "captcha")
+
+
+class LoginRequired(Exception):
+    """Facebook showed a login page or a 'confirm you're human' check."""
 
 
 def build_url(s: dict) -> str:
@@ -53,9 +58,21 @@ class Browser:
         finally:
             self._pw.stop()
 
+    def blocked(self) -> bool:
+        url = self.page.url.lower()
+        return any(m in url for m in _BLOCK_MARKERS)
+
     def login(self):
-        self.page.goto("https://www.facebook.com/")
-        input("Log in to Facebook in the browser window, then press Enter here to save the session... ")
+        self.page.goto("https://www.facebook.com/marketplace/")
+        print("Log in to Facebook in the browser window. If it asks you to confirm you're human,")
+        print("take your time - nothing will refresh. When you can see Marketplace listings,")
+        input("come back here and press Enter... ")
+        self.page.goto("https://www.facebook.com/marketplace/")
+        self.page.wait_for_timeout(3000)
+        if self.blocked():
+            print("Facebook still wants a login or check. Run `python -m flipper login` again.")
+        else:
+            print("Logged in and saved. You can close this and run the watcher.")
 
     def _content(self) -> str:
         for _ in range(4):
@@ -82,6 +99,8 @@ class Browser:
                     wait()
                 except Exception:
                     pass
+            if self.blocked():
+                raise LoginRequired(self.page.url)
             self.page.wait_for_timeout(random.randint(1500, 3000))
             for _ in range(scrolls):
                 self.page.mouse.wheel(0, random.randint(1800, 2600))

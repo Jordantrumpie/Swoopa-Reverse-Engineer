@@ -51,7 +51,7 @@ def process(db: DB, notifier: Notifier, cfg: dict, s: dict, items: list[dict]) -
 
 
 def run(cfg: dict, loop: bool, headless: bool) -> None:
-    from .fb import Browser, build_url
+    from .fb import Browser, LoginRequired, build_url
     data = Path(cfg["data_dir"])
     db = DB(data / "listings.db")
     notifier = Notifier(cfg.get("notify", {}))
@@ -66,6 +66,18 @@ def run(cfg: dict, loop: bool, headless: bool) -> None:
                 try:
                     items = browser.fetch(url, scrolls=s.get("scrolls", 1))
                     process(db, notifier, cfg, s, items)
+                except LoginRequired:
+                    if headless:
+                        # Never keep hammering a login/human check - that's how accounts get flagged.
+                        log.error("Facebook wants you to log in or confirm you're human. Stopping.\n"
+                                  "Run `python -m flipper login`, finish it, then start the watcher again.")
+                        notifier.send({"id": "0", "title": "Watcher stopped: Facebook wants a login check",
+                                       "url": "https://www.facebook.com/marketplace/"},
+                                      Verdict(alert=True, reasons=["Run: python -m flipper login"]))
+                        return
+                    print("\nFacebook is asking you to log in or confirm you're human.")
+                    input("Finish it in the browser window (take your time), then press Enter here... ")
+                    continue
                 except Exception as e:
                     log.warning("[%s] fetch failed: %s", s["name"], e)
                 time.sleep(random.uniform(3, 8))
