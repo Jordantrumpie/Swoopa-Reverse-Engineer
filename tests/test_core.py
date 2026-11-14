@@ -90,6 +90,10 @@ class ScoringTests(unittest.TestCase):
         self.assertFalse(evaluate(self.item(title="2012 Honda Civic salvage title"), [], self.cfg).alert)
         self.assertFalse(evaluate(self.item(price=1), [], self.cfg).alert)
 
+    def test_target_needs_year(self):
+        self.assertFalse(evaluate(self.item(title="Honda EU2200i generator", year=None, model="eu2200i"),
+                                  [], self.cfg).alert)
+
     def test_price_drop(self):
         v = evaluate(self.item(make="ford", model="focus", price=4000), [], self.cfg, price_drop_from=5000)
         self.assertTrue(v.alert)
@@ -106,6 +110,35 @@ class DBTests(unittest.TestCase):
             self.assertEqual(db.upsert("s", civic), (False, None))
             self.assertEqual(db.upsert("s", {**civic, "price": 3900}), (False, 4500))
             self.assertEqual(db.comps("chevrolet", "silverado", 2014, "999"), [14900])
+
+
+class SeedTests(unittest.TestCase):
+    def test_empty_pass_does_not_seed(self):
+        from flipper.__main__ import process
+        from flipper.notify import Notifier
+        with tempfile.TemporaryDirectory() as d:
+            db = DB(Path(d) / "x.db")
+            process(db, Notifier({}), {}, {"name": "s"}, [])
+            self.assertFalse(db.is_seeded("s"))
+            process(db, Notifier({}), {}, {"name": "s"}, extract_listings([GRAPHQL]))
+            self.assertTrue(db.is_seeded("s"))
+
+    def test_old_db_empty_seed_is_redone(self):
+        import sqlite3
+        with tempfile.TemporaryDirectory() as d:
+            path = Path(d) / "old.db"
+            c = sqlite3.connect(path)
+            c.executescript("CREATE TABLE searches (name TEXT PRIMARY KEY, seeded_at REAL);"
+                            "INSERT INTO searches VALUES ('honda', 1), ('main', 1);"
+                            "CREATE TABLE listings (id TEXT PRIMARY KEY, search TEXT, title TEXT, price REAL,"
+                            " mileage INTEGER, subtitle TEXT, location TEXT, year INTEGER, make TEXT, model TEXT,"
+                            " url TEXT, photo TEXT, first_seen REAL, last_seen REAL, first_price REAL,"
+                            " alerted INTEGER DEFAULT 0);"
+                            "INSERT INTO listings (id, search) VALUES ('1', 'main');")
+            c.commit(); c.close()
+            db = DB(path)
+            self.assertFalse(db.is_seeded("honda"))
+            self.assertTrue(db.is_seeded("main"))
 
 
 if __name__ == "__main__":

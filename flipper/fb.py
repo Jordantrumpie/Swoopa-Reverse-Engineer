@@ -57,6 +57,14 @@ class Browser:
         self.page.goto("https://www.facebook.com/")
         input("Log in to Facebook in the browser window, then press Enter here to save the session... ")
 
+    def _content(self) -> str:
+        for _ in range(4):
+            try:
+                return self.page.content()
+            except Exception:  # "page is navigating" - give it a moment
+                self.page.wait_for_timeout(1500)
+        return self.page.content()
+
     def fetch(self, url: str, scrolls: int = 1) -> list[dict]:
         captured = []
 
@@ -67,11 +75,18 @@ class Browser:
         self.page.on("response", on_response)
         try:
             self.page.goto(url, wait_until="domcontentloaded", timeout=45000)
-            self.page.wait_for_timeout(random.randint(2500, 4000))
+            # Search pages redirect while loading; wait for the page to settle and listings to appear.
+            for wait in (lambda: self.page.wait_for_load_state("load", timeout=15000),
+                         lambda: self.page.wait_for_selector('a[href*="/marketplace/item/"]', timeout=15000)):
+                try:
+                    wait()
+                except Exception:
+                    pass
+            self.page.wait_for_timeout(random.randint(1500, 3000))
             for _ in range(scrolls):
                 self.page.mouse.wheel(0, random.randint(1800, 2600))
                 self.page.wait_for_timeout(random.randint(1200, 2200))
-            docs = list(iter_html_json(self.page.content()))
+            docs = list(iter_html_json(self._content()))
             for r in captured:
                 try:
                     body = r.text()

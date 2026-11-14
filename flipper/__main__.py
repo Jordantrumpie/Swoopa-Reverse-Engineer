@@ -40,8 +40,10 @@ def process(db: DB, notifier: Notifier, cfg: dict, s: dict, items: list[dict]) -
             notifier.send(item, v)
             db.mark_alerted(item["id"])
             alerts += 1
-    if seeding:
-        db.mark_seeded(name)
+    if seeding and not items:
+        log.warning("[%s] found 0 listings - will try again next pass", name)
+    elif seeding:
+        db.mark_seeded(name, len(items))
         log.info("[%s] seeded with %d listings (no alerts on first pass)", name, len(items))
     else:
         log.info("[%s] %d listings, %d new, %d alerts", name, len(items), new, alerts)

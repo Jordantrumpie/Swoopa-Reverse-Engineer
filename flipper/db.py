@@ -28,12 +28,19 @@ class DB:
         self.conn = sqlite3.connect(str(path))
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        cols = [r["name"] for r in self.conn.execute("PRAGMA table_info(searches)")]
+        if "n" not in cols:
+            # Older DBs could mark a search seeded after a failed (empty) pass; redo those.
+            self.conn.execute("ALTER TABLE searches ADD COLUMN n INTEGER")
+            self.conn.execute("DELETE FROM searches WHERE name NOT IN (SELECT DISTINCT search FROM listings)")
+            self.conn.commit()
 
     def is_seeded(self, search: str) -> bool:
         return self.conn.execute("SELECT 1 FROM searches WHERE name=?", (search,)).fetchone() is not None
 
-    def mark_seeded(self, search: str) -> None:
-        self.conn.execute("INSERT OR IGNORE INTO searches VALUES (?, ?)", (search, time.time()))
+    def mark_seeded(self, search: str, n: int = 0) -> None:
+        self.conn.execute("INSERT OR IGNORE INTO searches (name, seeded_at, n) VALUES (?, ?, ?)",
+                          (search, time.time(), n))
         self.conn.commit()
 
     def upsert(self, search: str, item: dict) -> tuple[bool, float | None]:

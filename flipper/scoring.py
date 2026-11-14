@@ -22,6 +22,9 @@ class Verdict:
 
 
 def _matches_target(item: dict, t: dict) -> bool:
+    # Car listings put the year in the title; this skips Honda generators, Toyota parts, etc.
+    if item.get("year") is None:
+        return False
     if t.get("make") and item.get("make") != t["make"].lower():
         return False
     if t.get("model") and item.get("model") != t["model"].lower():
