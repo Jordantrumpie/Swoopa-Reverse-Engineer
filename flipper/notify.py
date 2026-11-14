@@ -36,12 +36,13 @@ class Notifier:
     def send(self, item: dict, verdict) -> None:
         title, body = format_alert(item, verdict)
         print(f"\n🚗 {title}\n{body}\n", flush=True)
-        for name in ("ntfy", "telegram", "discord"):
-            c = self.cfg.get(name)
-            if not c:
-                continue
+        channels = [n for n in ("ntfy", "telegram", "discord") if self.cfg.get(n)]
+        if not channels:
+            log.warning("No phone notifications set up - add a notify: section to config.yaml")
+        for name in channels:
             try:
-                getattr(self, "_" + name)(c, title, body, item)
+                getattr(self, "_" + name)(self.cfg[name], title, body, item)
+                log.info("%s: sent", name)
             except Exception as e:  # never let a notifier crash the watcher
                 log.warning("%s notify failed: %s", name, e)
 
