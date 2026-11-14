@@ -2,6 +2,7 @@
 data_dir: data
 interval_seconds: 90        # time between full passes over all searches (jittered ±30%)
 quiet_hours: [1, 6]         # poll 4x slower between 1am and 6am
+# browser: chrome           # use your installed Google Chrome instead of Playwright's test browser
 
 searches:
   # Marketplace city slug: open Marketplace, pick your location, copy the word after

@@ -44,12 +44,13 @@ def build_url(s: dict) -> str:
 
 
 class Browser:
-    def __init__(self, profile_dir: str | Path, headless: bool = True):
+    def __init__(self, profile_dir: str | Path, headless: bool = True, channel: str | None = None):
+        """channel="chrome" uses your installed Google Chrome instead of Playwright's test browser."""
         from playwright.sync_api import sync_playwright  # imported lazily so tests don't need it
         self._pw = sync_playwright().start()
         self.ctx = self._pw.chromium.launch_persistent_context(
             str(profile_dir), headless=headless, viewport={"width": 1280, "height": 900},
-            locale="en-US")
+            locale="en-US", channel=channel or None)
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
 
     def close(self):

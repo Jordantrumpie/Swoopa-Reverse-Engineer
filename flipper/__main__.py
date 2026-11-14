@@ -24,6 +24,12 @@ def load_config(path: str) -> dict:
     return cfg
 
 
+def profile_dir(cfg: dict) -> Path:
+    # Real Chrome and Playwright's test browser can't share a profile, so keep them apart.
+    name = "browser-profile" + (f"-{cfg['browser']}" if cfg.get("browser") else "")
+    return Path(cfg["data_dir"]) / name
+
+
 def process(db: DB, notifier: Notifier, cfg: dict, s: dict, items: list[dict]) -> int:
     name = s["name"]
     seeding = not db.is_seeded(name)
@@ -55,7 +61,7 @@ def run(cfg: dict, loop: bool, headless: bool) -> None:
     data = Path(cfg["data_dir"])
     db = DB(data / "listings.db")
     notifier = Notifier(cfg.get("notify", {}))
-    browser = Browser(data / "browser-profile", headless=headless)
+    browser = Browser(profile_dir(cfg), headless=headless, channel=cfg.get("browser"))
     interval = cfg.get("interval_seconds", 90)
     try:
         while True:
@@ -104,7 +110,7 @@ def main() -> None:
 
     if args.command == "login":
         from .fb import Browser
-        b = Browser(Path(cfg["data_dir"]) / "browser-profile", headless=False)
+        b = Browser(profile_dir(cfg), headless=False, channel=cfg.get("browser"))
         try:
             b.login()
         finally:
